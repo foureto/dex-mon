@@ -1,0 +1,91 @@
+@use "/src/var.scss";
+
+.item-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+
+  .item-icon {
+    width: 120px;
+    text-align: center;
+
+    @media all and (max-width: 540px) {
+      width: 80px;
+      text-align: center;
+    }
+
+    img {
+      height: 45px;
+
+      @media all and (max-width: 540px) {
+        height: 35px;
+      }
+    }
+  }
+
+  .item-description {
+    display: block;
+    width: 100%;
+
+    .item-ticker {
+      display: block;
+      font-weight: 600;
+      font-size: 18px;
+      color: var.$blue;
+
+      @media all and (max-width: 540px) {
+        font-size: 14px;
+      }
+    }
+
+    .item-name {
+      display: block;
+      font-weight: 400;
+      font-size: 14px;
+      color: var.$gray3;
+      padding-top: 5px;
+
+      @media all and (max-width: 540px) {
+        font-size: 12px;
+      }
+    }
+
+    @media all and (max-width: 540px) {
+      font-size: 12px;
+    }
+  }
+
+  .item-amount {
+    display: block;
+    gap: 7px;
+    text-align: end;
+    flex-wrap: nowrap;
+    font-weight: 600;
+    font-size: 18px;
+    color: #000000;
+    width: 100%;
+
+    @media all and (max-width: 540px) {
+      font-size: 12px;
+      width: 100%;
+    }
+
+    .item-amount-currency {
+      font-weight: 400;
+      font-size: 16px;
+      line-height: 19px;
+      color: var.$gray3;
+      padding-top: 5px;
+
+      @media all and (max-width: 540px) {
+        font-size: 12px;
+        width: 100%;
+      }
+    }
+  }
+}

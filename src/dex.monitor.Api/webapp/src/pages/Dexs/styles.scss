@@ -1,0 +1,26 @@
+.dex-list {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  .dex-item {
+    cursor: pointer;
+    border: 1px solid #acaaaa;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: white;
+    width: 400px;
+
+    &:hover {
+      background-color: rgb(233, 233, 233);
+    }
+
+    label {
+      display: inline-block;
+      text-align: right;
+      margin-right: 5px;
+      width: 60px;
+    }
+  }
+}

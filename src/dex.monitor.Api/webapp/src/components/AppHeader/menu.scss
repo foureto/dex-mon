@@ -1,0 +1,11 @@
+.header-menu {
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 20px 10px;
+  font-size: 12pt;
+
+  .menu-nav {
+    width: 50%;
+  }
+}
