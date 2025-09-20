@@ -58,3 +58,51 @@ export const transformFilter = (filter: Filter[]): any => {
   }
   return result;
 };
+
+export type Nullable<T> = null | undefined | T;
+export type AnyObject<T = any> = Record<PropertyKey, T>;
+
+export class JSONHelper {
+  public static tryParse = <T = unknown>(input: string): T | null => {
+    if (input === undefined || input === null) return null;
+    if (typeof input !== "string") return null;
+
+    try {
+      return JSON.parse(input) as T;
+    } catch (err) {
+      console.error("Error tryParse: ", err);
+      return null;
+    }
+  };
+
+  public static tryStringify = (value: any, key: string): string | null => {
+    if (value === undefined || value === null) return null;
+    if (typeof value === "string") return value;
+
+    try {
+      return JSON.stringify(value);
+    } catch (err) {
+      console.error(`Error serializing value for key [${key}]:`, err);
+      return null;
+    }
+  };
+}
+
+export function isFormData(value: unknown): value is FormData {
+  try {
+    // Native instanceof check (works in same realm/browser)
+    if (typeof FormData !== "undefined" && value instanceof FormData) {
+      return true;
+    }
+
+    return (
+      value !== null &&
+      typeof value === "object" &&
+      typeof (value as FormData).append === "function" &&
+      Object.prototype.toString.call(value) === "[object FormData]"
+    );
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}

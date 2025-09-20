@@ -7,4 +7,6 @@ internal class MartenPersistantStore(IDocumentStore store) : IPersistantStore
 {
     public IRepo<ChainStatus> ChainStatuses => new BaseMartenRepo<ChainStatus>(store.LightweightSession());
     public IRepo<DexSettings> DexSettings => new BaseMartenRepo<DexSettings>(store.LightweightSession());
+    public IRepo<TokenInfo> Tokens => new BaseMartenRepo<TokenInfo>(store.LightweightSession());
+    public IRepo<CexToken> CexTokens => new BaseMartenRepo<CexToken>(store.LightweightSession());
 }

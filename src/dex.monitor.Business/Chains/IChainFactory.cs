@@ -12,7 +12,7 @@ public interface IChainFactory
 internal class ChainFactory(IServiceProvider provider) : IChainFactory
 {
     public IChainProvider GetProvider(string network)
-        => provider.GetRequiredKeyedService<IChainProvider>(network);
+        => provider.GetKeyedService<IChainProvider>(network);
 
     public List<ITransactionFilterParser> GetFilterParsers(string network)
         => provider.GetKeyedServices<ITransactionFilterParser>(network).ToList();

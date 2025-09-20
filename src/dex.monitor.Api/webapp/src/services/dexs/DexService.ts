@@ -3,7 +3,7 @@ import { IListResult, IResult } from "@services/commons";
 import { AddDexRequest, DexSetting, UpdateDexRequest } from "./models";
 
 class DexService extends ServiceBase {
-  protected static BASE_URL = "dexs";
+  protected static PREFIX = "dexs";
 
   public static getDexs(): Promise<IListResult<DexSetting>> {
     return this.get("");

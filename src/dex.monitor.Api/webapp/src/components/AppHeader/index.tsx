@@ -7,6 +7,7 @@ const items = [
   { key: "main", label: "main" },
   { key: "chains", label: "chains" },
   { key: "dexs", label: "dex" },
+  { key: "tokens", label: "tokens" },
 ];
 
 const AppHeader: React.FC = () => {

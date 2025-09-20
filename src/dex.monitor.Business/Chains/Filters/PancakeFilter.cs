@@ -30,10 +30,12 @@ internal class PancakeFilterParser : ITransactionFilterParser
 
     public async Task<List<SwapOperation>> Process(IChainProvider provider, Transaction tx, CancellationToken ct)
     {
+        var swapEvents = await provider.GetSwapEvents(tx.TransactionHash, ct);
+        
         var message = tx.DecodeTransactionToFunctionMessage<SwapExactTokensForTokensFunction>();
         var from = await provider.GetTokenInfo(message.Path[0], ct);
         var to = await provider.GetTokenInfo(message.Path[1], ct);
-        
+
         var result = new SwapOperation
         {
             Network = provider.Network,
@@ -41,7 +43,7 @@ internal class PancakeFilterParser : ITransactionFilterParser
             Pair = new TokenSwapPair
             {
                 PairAddress = "",
-                Symbol = "",
+                Symbol = $"{from.Code}@{to.Code}",
                 In = new TokenSwapValue
                 {
                     Address = from.Address,
@@ -58,6 +60,6 @@ internal class PancakeFilterParser : ITransactionFilterParser
         };
 
 
-        return Task.FromResult<List<SwapOperation>>([result]);
+        return [result];
     }
 }

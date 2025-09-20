@@ -1,4 +1,5 @@
 ﻿using dex.monitor.Business.Chains;
+using dex.monitor.Business.Chains.Models;
 using dex.monitor.Business.DataStores.Persistant;
 using dex.monitor.Business.Domain;
 using dex.monitor.Business.Services.BlockVisitors;
@@ -27,8 +28,12 @@ public class ReadBlockHandler(
     {
         await using var scope = serviceProvider.CreateAsyncScope();
         var newStore = scope.ServiceProvider.GetRequiredService<IPersistantStore>();
+        
         var visitors = scope.ServiceProvider.GetServices<IBlockVisitor>().ToList();
         var chainProvider = scope.ServiceProvider.GetRequiredKeyedService<IChainProvider>(chainRef.Network);
+
+        var pools = await chainProvider.GetLiquidityPools(
+            new LiquidityPoolsRequest { FactoryAddress = "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73" }, ct);
 
         do
         {
@@ -39,10 +44,10 @@ public class ReadBlockHandler(
                 .GetMany(e => e.IsActive && e.Network == chainStatus.Network, ct);
 
             chainStatus.Block.Height += 1;
+            
+            var swaps = await chainProvider.CheckSwaps(chainStatus.Block.Height.ToString(), ct);
+            
             await newStore.ChainStatuses.StoreAndSave(chainStatus, ct);
-            // var block = await chainProvider.GetBlock(chainStatus.Block.Height, ct);
-            // if (block == null)
-            //     return;
             //
             // var tasks = visitors.Select(async e => await e.ProcessTransaction(
             //     new ProcessTransactionRequest { Block = block, Dexs = dexs, ChainStatus = chainStatus }, ct));

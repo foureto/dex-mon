@@ -1,143 +1,143 @@
-import { redirect } from "react-router-dom";
-import { IDataResult } from "./commons";
+import ky, { Options } from "ky";
+import { notification } from "antd";
+import {
+  AnyObject,
+  IResult,
+  isFormData,
+  JSONHelper,
+  Nullable,
+} from "./commons";
 
-const openNotificationSuccess = (_: string) => {
-  return;
-};
-
-const openNotificationError = (_: string) => {
-  return;
-};
+type Payload = Nullable<AnyObject | FormData>;
 
 export abstract class ServiceBase {
-  protected static BASE_URL = "";
+  protected static PREFIX = "";
+  protected static TIMEOUT: Options["timeout"] = false;
 
-  protected static getUrl(url: string): string {
-    return `/api/${this.BASE_URL}${url}`;
-  }
+  protected static api = ky.create({
+    timeout: this.TIMEOUT,
+    hooks: {
+      beforeRequest: [
+        (request, _) => {
+          request.headers.set("ngrok-skip-browser-warning", "69420");
+        },
+      ],
+      afterResponse: [
+        async (_, __, response) => {
+          if (response.status === 401 || response.status === 403) {
+            return location.replace("/login");
+          }
 
-  protected static async http(
+          const data: Nullable<IResult> = await response.json();
+          if (data?.message) {
+            data.success
+              ? notification.success({
+                  message: "Success",
+                  description: data.message,
+                })
+              : notification.error({
+                  message: "Error",
+                  description: data.message,
+                });
+          }
+        },
+      ],
+      beforeError: [
+        async (error) => {
+          const data: Nullable<IResult> = await error.response.json();
+          if (data?.message) {
+            notification.error({
+              message: error.response.statusText,
+              description: data.message,
+            });
+          }
+          return error;
+        },
+      ],
+    },
+  });
+
+  private static http<T = unknown>(
     method: string,
     url: string,
-    data?: any,
-    otherHeaders?: any
-  ): Promise<any> {
-    const headers = {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "x-app-chk": "bot[6]",
-      ...otherHeaders,
-    };
+    payload?: Payload
+  ) {
+    return this.api<T>(url, { method, ...this.getOptions(payload) }).json();
+  }
 
-    if (headers && headers["Content-Type"] === null) {
-      delete headers["Content-Type"];
-    }
-
-    const response = await fetch(this.getUrl(url), {
+  private static async stream<T = unknown>(
+    method: string,
+    url: string,
+    payload?: Payload,
+    callback?: (e: any) => void
+  ): Promise<{ success: boolean }> {
+    const res = await this.api<T>(url, {
       method,
-      body:
-        method === "GET"
-          ? null
-          : headers["Content-Type"]
-            ? JSON.stringify(data)
-            : data,
-      credentials: "include",
-      headers,
-      redirect: "follow",
+      ...this.getOptions(payload),
+      timeout: false,
     });
 
-    return new Promise(async (resolve, reject) => {
-      if (
-        response.headers.get("content-type") === "application/pdf" ||
-        !!response.headers.get("content-disposition")
-      ) {
-        const res = await response.blob();
-        return resolve(res);
-      }
-      if (response.status === 401) {
-        openNotificationError("You are not authorized");
-        redirect("/login");
-        return reject("You are not authorized");
-      }
+    if (!res.body) {
+      return new Promise((resolve) => resolve({ success: false }));
+    }
 
-      try {
-        const result = await response.json();
-        if (result.success === false) {
-          if (result?.message) openNotificationError(result.message);
-          return reject(`error.${result.errorCode}`);
+    const decoder = new TextDecoder("utf-8");
+    for await (const chunk of res.body as any) {
+      callback?.(JSONHelper.tryParse(decoder.decode(chunk)));
+    }
+
+    return new Promise((resolve) => resolve({ success: true }));
+  }
+
+  protected static get<T = unknown>(url: string, payload?: Payload) {
+    if (!payload) return this.http<T>("GET", url);
+    const query = Object.getOwnPropertyNames(payload)
+      .reduce((res: string[], key: string) => {
+        const pld = payload as any;
+        if (Array.isArray(pld[key])) {
+          if (pld[key].length > 0)
+            res.push(pld[key].map((v) => `${key}=${v}`).join("&"));
+          return res;
         }
+        if (pld[key] === null || pld[key] === undefined) return res;
+        res.push(`${key}=${pld[key]}`);
+        return res;
+      }, [])
+      .join("&");
 
-        if (result?.message) openNotificationSuccess(result.message);
-        return resolve(result);
-      } catch {
-        return reject("Bad response");
-      }
-    });
+    return this.http<T>("GET", `${url}?${query}`);
+  }
+  protected static post<T = unknown>(url: string, payload?: Payload) {
+    return this.http<T>("POST", url, payload);
+  }
+  protected static put<T = unknown>(url: string, payload?: Payload) {
+    return this.http<T>("PUT", url, payload);
+  }
+  protected static delete<T = unknown>(url: string, payload?: Payload) {
+    return this.http<T>("DELETE", url, payload);
   }
 
-  protected static async stream<T>(
-    method: string,
+  protected static streamPost<T = unknown>(
     url: string,
-    data?: any,
-    callback?: (e: IDataResult<T>) => void
-  ): Promise<any> {
-    const headers = {
-      Accept: "application/json",
-      "Content-Type": "application/json",
+    payload?: Payload,
+    cb?: (e: any) => void
+  ) {
+    return this.stream<T>("POST", url, payload, cb);
+  }
+
+  private static getPayload = (data?: Payload): Options => {
+    if (!data) return {};
+    return isFormData(data) ? { body: data } : { json: data };
+  };
+  private static getPrefix() {
+    if (!this.PREFIX) return "/api/";
+    return `/api/${this.PREFIX}`;
+  }
+  private static getOptions(data?: Payload): Options {
+    return {
+      ...this.getPayload(data),
+      prefixUrl: this.getPrefix(),
+      timeout: this.TIMEOUT,
     };
-
-    const enc = new TextDecoder("utf-8");
-    const response = await fetch(this.getUrl(url), {
-      method,
-      body: headers["Content-Type"] ? JSON.stringify(data) : data,
-      credentials: "include",
-      headers,
-    });
-
-    let last: IDataResult<T> = {
-      success: false,
-      message: "",
-      statusCode: 0,
-    };
-    
-    for await (const chunk of response.body as any) {
-      last = JSON.parse(enc.decode(chunk));
-      callback?.(last);
-    }
-
-    return new Promise((resolve) => {
-      return resolve({ success: true });
-    });
-  }
-
-  protected static get(url: string, data?: any, options?: any): any {
-    if (data) {
-      [...Object.getOwnPropertyNames(data)].forEach((e) => {
-        if (data[e] === undefined) delete data[e];
-      });
-    }
-
-    const query = data ? `?${new URLSearchParams(data).toString()}` : "";
-    return this.http("GET", url + query, data, options);
-  }
-
-  protected static post(url: string, data?: any, options?: any): any {
-    return this.http("POST", url, data, options);
-  }
-
-  protected static put(url: string, data?: any, options?: any): any {
-    return this.http("PUT", url, data, options);
-  }
-
-  protected static delete(url: string, data?: any, options?: any): any {
-    return this.http("DELETE", url, data, options);
-  }
-
-  protected static streamPost<T>(
-    url: string,
-    data?: any,
-    callback?: (e: IDataResult<T>) => void
-  ): any {
-    return this.stream("POST", url, data, callback);
   }
 }

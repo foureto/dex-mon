@@ -8,7 +8,7 @@ import {
 } from "./models";
 
 class ChainsService extends ServiceBase {
-  protected static BASE_URL = "chains/";
+  protected static PREFIX = "chains/";
 
   public static getChains(): Promise<IListResult<ChainStatus>> {
     return this.get("");

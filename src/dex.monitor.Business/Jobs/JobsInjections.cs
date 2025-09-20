@@ -7,6 +7,8 @@ internal static class JobsInjections
 {
     public static IServiceCollection AddJobs(this IServiceCollection services, IConfiguration configuration)
         => services
-            .AddHostedService<ChainMonitorWorker>()
+            // .AddHostedService<ChainMonitorWorker>()
+            // .AddHostedService<SwapMonitorJob>()
+            .AddHostedService<TokensInitJob>()
         ;
 }

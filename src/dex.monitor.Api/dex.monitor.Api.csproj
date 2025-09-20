@@ -4,10 +4,11 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <SpaRoot>webapp\</SpaRoot>
+        <UserSecretsId>eb997368-a844-437f-8e16-5f48353836cf</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="9.0.5"/>
+        <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="9.0.9" />
     </ItemGroup>
 
     <ItemGroup>
@@ -16,7 +17,6 @@
 
     <ItemGroup>
       <Folder Include="webapp\src\components\" />
-      <Folder Include="webapp\src\helpers\" />
       <Folder Include="webapp\src\stores\" />
       <Folder Include="webapp\src\styles\" />
     </ItemGroup>

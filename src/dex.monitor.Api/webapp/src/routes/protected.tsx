@@ -4,6 +4,7 @@ import GlobalLoader from "@components/GlobalLoader";
 import MainPage from "@pages/Main";
 import DexsPage from "@pages/Dexs";
 import ChainsPage from "@pages/Chains";
+import TokensPage from "@pages/Tokens";
 
 const protectedRoutes: RouteObject[] = [
   {
@@ -15,6 +16,7 @@ const protectedRoutes: RouteObject[] = [
       { path: "main", element: <MainPage /> },
       { path: "dexs", element: <DexsPage /> },
       { path: "chains", element: <ChainsPage /> },
+      { path: "tokens", element: <TokensPage /> },
     ],
   },
 ];
