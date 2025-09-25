@@ -35,8 +35,8 @@ internal static class DataStoresInjections
                 options.RegisterDocumentType<ChainStatus>();
                 options.RegisterDocumentType<DexSettings>();
 
-                options.RegisterDocumentType<TokenInfo>();
-                options.Schema.For<TokenInfo>().Identity(e => e.Code);
+                options.RegisterDocumentType<DexToken>();
+                options.Schema.For<DexToken>().Identity(e => e.Code);
                 
                 options.RegisterDocumentType<CexToken>();
                 options.Schema.For<CexToken>().Identity(e => e.Code);

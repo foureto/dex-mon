@@ -21,8 +21,8 @@ internal class InMemoryPairsStore : IPairsStore
             {
                 Base = symbol.Quoted,
                 Quoted = symbol.Base,
-                Ask = 1 / symbol.Ask,
-                Bid = 1 / symbol.Bid,
+                Ask = 1 / (symbol.Bid == 0 ? 1 : symbol.Bid),
+                Bid = 1 / (symbol.Ask == 0 ? 1 : symbol.Ask),
             };
             _symbols.TryAdd(reversed.Base, new Dictionary<string, HashSet<SymbolRef>>());
             _symbols[reversed.Base].TryAdd(reversed.Quoted, []);

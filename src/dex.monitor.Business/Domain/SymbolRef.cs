@@ -3,11 +3,12 @@
 public record SymbolRef(
     string Base,
     string Quoted,
+    string ApiCode,
     string Exchange,
     string Network,
     decimal Bid,
     decimal Ask,
     DateTime Stamp)
 {
-    public override int GetHashCode() => HashCode.Combine(Base, Quoted, Exchange, Network);
+    public override int GetHashCode() => HashCode.Combine(ApiCode, Exchange, Network);
 }

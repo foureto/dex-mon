@@ -2,6 +2,7 @@
 using dex.monitor.Business.Chains.Internals.Bsc;
 using dex.monitor.Business.Chains.Internals.Celo;
 using dex.monitor.Business.Chains.Internals.Eth;
+using dex.monitor.Business.Chains.Internals.Polygon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,6 +16,7 @@ internal static class ChainsInjections
             .AddEthProvider<EthProvider, EthSettings>(configuration, "chains:eth", ChainConstants.Eth)
             .AddEthProvider<BscProvider, BscSettings>(configuration, "chains:bsc", ChainConstants.Bsc)
             .AddEthProvider<CeloProvider, CeloSettings>(configuration, "chains:celo", ChainConstants.Celo)
+            .AddEthProvider<PolygonProvider, PolygonSettings>(configuration, "chains:polygon", ChainConstants.Polygon)
             
             // filters
             .AddKeyedSingleton<ITransactionFilterParser, PancakeFilterParser>(ChainConstants.Bsc);

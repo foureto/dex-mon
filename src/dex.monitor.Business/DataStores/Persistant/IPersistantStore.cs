@@ -6,6 +6,6 @@ public interface IPersistantStore
 {
     IRepo<ChainStatus> ChainStatuses { get; }
     IRepo<DexSettings> DexSettings { get; }
-    IRepo<TokenInfo> Tokens { get; }
+    IRepo<DexToken> DexTokens { get; }
     IRepo<CexToken> CexTokens { get; }
 }

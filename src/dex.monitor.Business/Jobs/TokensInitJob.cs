@@ -1,9 +1,14 @@
-﻿using dex.monitor.Business.DataStores.Persistant;
+﻿using dex.monitor.Business.Chains;
+using dex.monitor.Business.DataStores.MemoryStores.PairsStore;
+using dex.monitor.Business.DataStores.MemoryStores.TokensStore;
+using dex.monitor.Business.DataStores.Persistant;
 using dex.monitor.Business.Domain;
+using dex.monitor.Business.Jobs.Handlers;
 using dex.monitor.Business.Services.Cex;
 using dex.monitor.Business.Services.Cex.Models;
 using dex.monitor.Business.Services.Screener;
 using dex.monitor.Business.Services.Screener.Models.Requests;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -14,11 +19,14 @@ internal class TokensInitJob(IServiceProvider provider) : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await using var scope = provider.CreateAsyncScope();
-        await GetTokensFromCex(stoppingToken);
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        // var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-        // await GetTokensDexInfo(stoppingToken);
-        // await mediator.Publish(new InitPairs(), stoppingToken);
+        await GetTokensFromCex(stoppingToken);
+        await mediator.Publish(new InitCexPairs(), stoppingToken);
+
+        await GetDexTokens(stoppingToken);
+        //await mediator.Publish(new InitDexPairs(), stoppingToken);
+
         await Task.Yield();
     }
 
@@ -100,72 +108,89 @@ internal class TokensInitJob(IServiceProvider provider) : BackgroundService
             });
     }
 
-    private async Task GetTokensDexInfo(CancellationToken ct)
+    private async Task GetDexTokens(CancellationToken ct)
     {
-        var allowedNetworks = new[] { "eth", "bsc", "celo" };
         await using var scope = provider.CreateAsyncScope();
+        var tokensStore = scope.ServiceProvider.GetRequiredService<ITokensStore>();
+        var pairsStore = scope.ServiceProvider.GetRequiredService<IPairsStore>();
         var persistantStore = scope.ServiceProvider.GetRequiredService<IPersistantStore>();
         var dexScreener = scope.ServiceProvider.GetRequiredService<IDexScreener>();
 
-        var tokens = (await persistantStore.Tokens.GetMany(e => !e.DexSynced, ct))
-            .Where(e => e.Networks.Any(n => allowedNetworks.Contains(n.Network))).ToList();
-        var tokensBySymbol = tokens.GroupBy(e => e.Code).ToDictionary(e => e.Key, e => e.First());
+        var dexTokens = await persistantStore.DexTokens.GetMany(e => true, ct);
+        var tokensBySymbol = dexTokens.GroupBy(e => e.Code).ToDictionary(e => e.Key, e => e.First());
 
-        foreach (var addressNet in tokensBySymbol.Values
-                     .SelectMany(token => token.Networks
-                         .Where(e => allowedNetworks.Contains(e.Network))
-                         .Select(e => new { e.Address, e.Network })))
+        foreach (var network in ChainConstants.SupportedNetworks)
         {
-            var response = await dexScreener.GetPairsByToken(
-                new GetPairsByTokenRequest { Chain = addressNet.Network, Address = addressNet.Address }, ct);
-            if (response.Count == 0) continue;
-
-            var toUpdate = new List<TokenInfo>();
-            foreach (var pair in response)
+            var networkTokens = await tokensStore.GetTokens(network);
+            var toUpdate = new HashSet<DexToken>();
+            var pairs = new List<SymbolRef>();
+            foreach (var token in networkTokens)
             {
-                var pairToAdd = new DexPair
-                {
-                    DexName = pair.DexName,
-                    PairAddress = pair.PairAddress,
-                    BaseSymbol = pair.BaseSymbol,
-                    BaseAddress = pair.BaseAddress,
-                    QuotedSymbol = pair.QuotedSymbol,
-                    QuotedAddress = pair.QuotedAddress,
-                };
+                var response = await dexScreener.GetPairsByToken(
+                    new GetPairsByTokenRequest { Chain = network, Address = token.Address }, ct);
+                if (response.Count == 0) continue;
 
-                NetworkToken tokenNet;
-                if (tokensBySymbol.TryGetValue(pair.BaseSymbol, out var baseToken))
+                foreach (var pair in response)
                 {
-                    tokenNet = baseToken.Networks.FirstOrDefault(e => e.Network == addressNet.Network);
-                    if (tokenNet != null)
+                    var dexPair = new DexPair
                     {
-                        baseToken.IsValuable = true;
-                        baseToken.DexSynced = true;
-                        tokenNet.IsValuable = true;
-                        tokenNet.Pairs ??= [];
-                        if (tokenNet.Pairs.Any(e => e.PairAddress != pairToAdd.PairAddress))
-                            tokenNet.Pairs.Add(pairToAdd);
-                        toUpdate.Add(baseToken);
-                    }
+                        DexName = pair.DexName,
+                        PairAddress = pair.PairAddress,
+                        BaseSymbol = pair.BaseSymbol.ToUpperInvariant(),
+                        BaseAddress = pair.BaseAddress,
+                        BaseName = pair.BaseName,
+                        QuotedSymbol = pair.QuotedSymbol.ToUpperInvariant(),
+                        QuotedAddress = pair.QuotedAddress,
+                        QuotedName = pair.QuotedName,
+                        Network = network,
+                    };
+
+                    var toAdd = CheckPair(dexPair.BaseSymbol, dexPair, tokensBySymbol);
+                    if (toAdd != null) toUpdate.Add(toAdd);
+
+                    var nextToAdd = CheckPair(dexPair.QuotedSymbol, dexPair, tokensBySymbol);
+                    if (nextToAdd != null) toUpdate.Add(nextToAdd);
+
+                    pairs.Add(new SymbolRef(
+                        dexPair.BaseSymbol,
+                        dexPair.QuotedSymbol,
+                        dexPair.PairAddress,
+                        dexPair.DexName,
+                        dexPair.Network,
+                        pair.LiquidityBase / pair.LiquidityQuoted,
+                        pair.LiquidityBase / pair.LiquidityQuoted,
+                        DateTime.UtcNow));
                 }
-
-                if (!tokensBySymbol.TryGetValue(pair.QuotedSymbol, out var quotedToken)) continue;
-
-                tokenNet = quotedToken.Networks.FirstOrDefault(e => e.Network == addressNet.Network);
-                if (tokenNet == null) continue;
-
-                quotedToken.IsValuable = true;
-                quotedToken.DexSynced = true;
-                tokenNet.IsValuable = true;
-                tokenNet.Pairs ??= [];
-                if (tokenNet.Pairs.Any(e => e.PairAddress != pairToAdd.PairAddress))
-                    tokenNet.Pairs.Add(pairToAdd);
-                toUpdate.Add(quotedToken);
             }
+            
+            await pairsStore.SetPairs(pairs);
 
             if (toUpdate.Count == 0) continue;
-
-            await persistantStore.Tokens.StoreAndSave(toUpdate, ct);
+            await persistantStore.DexTokens.StoreAndSave(toUpdate, ct);
         }
+    }
+
+    private static DexToken CheckPair(string code, DexPair pair, Dictionary<string, DexToken> tokensBySymbol)
+    {
+        var shouldReturn = false;
+        if (!tokensBySymbol.TryGetValue(code, out var dexToken))
+        {
+            tokensBySymbol.TryAdd(code, new DexToken
+            {
+                Code = code,
+                Name = pair.BaseSymbol == code ? pair.BaseName : pair.QuotedName,
+                Address = pair.BaseAddress,
+                Pairs = [pair],
+            });
+            shouldReturn = true;
+        }
+
+        dexToken = tokensBySymbol[code];
+        if (dexToken.Pairs.Any(e => e.PairAddress == pair.PairAddress))
+            return shouldReturn ? dexToken : null;
+
+        dexToken.Pairs.Add(pair);
+
+        return null;
     }
 }
