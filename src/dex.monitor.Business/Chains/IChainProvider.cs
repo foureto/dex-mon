@@ -11,6 +11,8 @@ public interface IChainProvider
     Task<NetworkToken> GetTokenInfo(string address, CancellationToken ct = default);
     Task<List<SwapEvent>> GetSwapEvents(string txHash, CancellationToken ct = default);
     Task<List<PoolInfo>> GetLiquidityPools(LiquidityPoolsRequest request, CancellationToken ct = default);
+    
+    Task<DexPairRate> GetPairRate(DexPairRequest request, CancellationToken ct = default);
 
     Task<ChainSubscription> SubscribeLogs<T>(
         string wsUrl, Action<WrappedEvent<T>> action, CancellationToken ct = default)

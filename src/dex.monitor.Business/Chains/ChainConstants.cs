@@ -8,4 +8,8 @@ public class ChainConstants
     public const string Bsc = "bsc";
     public const string Celo = "celo";
     public const string Polygon = "polygon";
+    
+    
+    // DEX Codex
+    public const string DexUniV2 = "uniswapv2";
 }

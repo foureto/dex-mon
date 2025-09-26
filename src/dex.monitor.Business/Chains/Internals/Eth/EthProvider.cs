@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using dex.monitor.Business.Chains.Abis;
 using dex.monitor.Business.Chains.Abis.Models;
+using dex.monitor.Business.Chains.DexProviders;
 using dex.monitor.Business.Chains.Models;
 using dex.monitor.Business.DataStores.MemoryStores.TokensStore;
 using dex.monitor.Business.Domain;
@@ -119,6 +120,18 @@ internal class EthProvider(
         }
 
         return pools;
+    }
+
+    public async Task<DexPairRate> GetPairRate(DexPairRequest request, CancellationToken ct = default)
+    {
+        var dexProvider = request.DexProtocol switch
+        {
+            ChainConstants.DexUniV2 => new UniswapV2Provider(_client, logger),
+            _ => null,
+        };
+
+        if (dexProvider == null) return null;
+        return await dexProvider.GetRate(request, ct);
     }
 
     public async Task<ChainSubscription> SubscribeLogs<T>(

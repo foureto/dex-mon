@@ -9,6 +9,7 @@ internal static class JobsInjections
         => services
             // .AddHostedService<ChainMonitorWorker>()
             // .AddHostedService<SwapMonitorJob>()
-            .AddHostedService<TokensInitJob>()
+            // .AddHostedService<TokensInitJob>()
+            .AddHostedService<TestPairRateJob>()
         ;
 }
